@@ -7,6 +7,7 @@ import { dayjs } from "../lib/dayjs";
 import nodemailer from "nodemailer";
 import { ClientError } from "../err/client-error";
 import { env } from "../env";
+import { Participant } from "@prisma/client";
 
 export async function confirmTrip(app: FastifyInstance) {
     app.withTypeProvider<ZodTypeProvider>().get('/trips/:tripId/confirm', {
@@ -49,7 +50,7 @@ export async function confirmTrip(app: FastifyInstance) {
         const mail = await getMailClient()        
 
         await Promise.all(
-            trip.participants.map(async (participant) => {
+            trip.participants.map(async (participant: Participant) => {
                 const confirmationLink = `${env.API_BASE_URL}/participants/${participant.id}/confirm`
 
                 const message = await mail.sendMail({
