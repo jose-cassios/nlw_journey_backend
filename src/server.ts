@@ -18,7 +18,7 @@ import { env } from "./env";
 const app = fastify()
 
 app.register(cors, {
-    origin: '*'
+    origin: env.WEB_BASE_URL
 })
 
 app.setValidatorCompiler(validatorCompiler);
@@ -39,6 +39,9 @@ app.register(updateTrip)
 app.register(getTripDetails)
 app.register(getParticipant)
 
-app.listen({ port: env.PORT }).then(() =>{
-    console.log(`Server running on port ${env.PORT}`)
+app.listen({
+  port: env.PORT,
+  host: '0.0.0.0'
+}).then(() => {
+  console.log(`Server running on port ${env.PORT}`)
 })
