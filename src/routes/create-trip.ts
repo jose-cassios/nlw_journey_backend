@@ -58,34 +58,38 @@ export async function createTrip(app: FastifyInstance) {
     
         const confirmationLink = `${env.API_BASE_URL}/trips/${trip.id}/confirm`
 
-        const mail = await getMailClient()
+        try {
+            const mail = await getMailClient()
+    
+            const message = await mail.sendMail({
+                from: {
+                    name: 'Equipe FlyPlan',
+                    address: 'suporte@FlyPlan',
+                },
+                to: {
+                    name: owner_name,
+                    address: owner_email
+                },
+                subject: 'Confirmação de viagem',
+                html: `
+                    <div style="font-family: sans-serif; font-size: 16px; line-height: 1.6;">
+                        <p>Você solicitou a criação de uma viagem para <strong>${destination}</strong> nas datas de <strong>${formattedStartDate} a ${formattedEndDate}.</strong></p>
+                        <p></p>
+                        <p>Para confirmar sua viagem, clique no link abaixo:</p>
+                        <p></p>
+                        <p>
+                            <a href="${confirmationLink}">Confirmar viagem</a>
+                        </p>
+                        <p></p>
+                        <p>Caso você não saiba do que se trata esse e-mail, apenas ignore.</p>
+                    </div>
+                `.trim()
+            })
+            console.log(nodemailer.getTestMessageUrl(message))
+        } catch (error) {
+            console.error("Falha ao enviar e-mail de confirmação:", error)
+        }
 
-        const message = await mail.sendMail({
-            from: {
-                name: 'Equipe FlyPlan',
-                address: 'suporte@FlyPlan',
-            },
-            to: {
-                name: owner_name,
-                address: owner_email
-            },
-            subject: 'Confirmação de viagem',
-            html: `
-                <div style="font-family: sans-serif; font-size: 16px; line-height: 1.6;">
-                    <p>Você solicitou a criação de uma viagem para <strong>${destination}</strong> nas datas de <strong>${formattedStartDate} a ${formattedEndDate}.</strong></p>
-                    <p></p>
-                    <p>Para confirmar sua viagem, clique no link abaixo:</p>
-                    <p></p>
-                    <p>
-                        <a href="${confirmationLink}">Confirmar viagem</a>
-                    </p>
-                    <p></p>
-                    <p>Caso você não saiba do que se trata esse e-mail, apenas ignore.</p>
-                </div>
-            `.trim()
-        })
-
-        console.log(nodemailer.getTestMessageUrl(message))
 
         return { tripId: trip.id }
     })
