@@ -21,9 +21,7 @@ export async function confirmTrip(app: FastifyInstance) {
         const { tripId } = request.params
 
         const trip = await prisma.trip.findUnique({
-            where: {
-                id: tripId,
-            },
+            where: { id: tripId },
             include: {
                 participants: {
                     where: { is_owner: false }
@@ -48,10 +46,13 @@ export async function confirmTrip(app: FastifyInstance) {
         const formattedEndDate = dayjs(trip.ends_at).format("LL")
 
         try {
-
             const mail = await getMailClient()        
     
-            await Promise.all(
+            const emailTimeout = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Email timeout reached')), 5000)
+            })
+
+            const sendEmails = Promise.all(
                 trip.participants.map(async (participant: Participant) => {
                     const confirmationLink = `${env.API_BASE_URL}/participants/${participant.id}/confirm`
     
@@ -77,11 +78,14 @@ export async function confirmTrip(app: FastifyInstance) {
                                 `.trim()
                             })
                     
-                            console.log(nodemailer.getTestMessageUrl(message))
+                    console.log(nodemailer.getTestMessageUrl(message))
                 })
             )
+
+            await Promise.race([sendEmails, emailTimeout])
+
         } catch (error) {
-            console.error("Falha ao enviar e-mail de confirmação:", error)
+            console.error("Falha ou tempo esgotado ao enviar e-mails:", error)
         }
 
         return reply.redirect(`${env.WEB_BASE_URL}/trips/${tripId}`)
