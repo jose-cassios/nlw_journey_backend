@@ -22,11 +22,11 @@ export async function createTrip(app: FastifyInstance) {
         },
     }, async (request) => {
         const { destination, starts_at, ends_at, owner_name, owner_email, emails_to_invite } = request.body
-        
-        if (dayjs(starts_at).isBefore(new Date())){
+
+        if (dayjs(starts_at).isBefore(new Date())) {
             throw new ClientError('Invalid trip start date')
         }
-        if (dayjs(ends_at).isBefore(starts_at)){
+        if (dayjs(ends_at).isBefore(starts_at)) {
             throw new ClientError('Invalid trip end date')
         }
 
@@ -44,7 +44,7 @@ export async function createTrip(app: FastifyInstance) {
                                 is_owner: true,
                                 is_confirmed: true
                             },
-                            ...emails_to_invite.map(email=>{
+                            ...emails_to_invite.map(email => {
                                 return { email }
                             })
                         ],
@@ -52,16 +52,20 @@ export async function createTrip(app: FastifyInstance) {
                 }
             }
         })
-        
-        const formattedStartDate =dayjs(starts_at).format("LL")
-        const formattedEndDate =dayjs(ends_at).format("LL")
-    
+
+        const formattedStartDate = dayjs(starts_at).format("LL")
+        const formattedEndDate = dayjs(ends_at).format("LL")
+
         const confirmationLink = `${env.API_BASE_URL}/trips/${trip.id}/confirm`
 
         try {
             const mail = await getMailClient()
-    
-            const message = await mail.sendMail({
+
+            const emailTimeout = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Email timeout reached')), 5000)
+            })
+
+            const sendEmailTask = mail.sendMail({
                 from: {
                     name: 'Equipe FlyPlan',
                     address: 'suporte@FlyPlan',
@@ -85,11 +89,13 @@ export async function createTrip(app: FastifyInstance) {
                     </div>
                 `.trim()
             })
+
+            const message = await Promise.race([sendEmailTask, emailTimeout]) as nodemailer.SentMessageInfo
+            
             console.log(nodemailer.getTestMessageUrl(message))
         } catch (error) {
-            console.error("Falha ao enviar e-mail de confirmação:", error)
+            console.error("Falha ou tempo esgotado ao enviar e-mail de confirmação:", error)
         }
-
 
         return { tripId: trip.id }
     })
